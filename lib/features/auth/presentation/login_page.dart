@@ -3,6 +3,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/app_widgets.dart';
 import '../../dosen/home/dosen_dashboard_page.dart';
 import '../../mahasiswa/home/mahasiswa_dashboard_page.dart';
+import '../../../shared/data/dummy_data.dart';
 
 enum UserRole { mahasiswa, dosen }
 
@@ -21,13 +22,24 @@ class _LoginPageState extends State<LoginPage> {
   bool get _isDosen => _role == UserRole.dosen;
 
   void _login() {
-    if (_idCtrl.text.trim().isEmpty || _passCtrl.text.isEmpty) {
+    final id = _idCtrl.text.trim();
+    final pass = _passCtrl.text;
+
+    if (id.isEmpty || pass.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Isi email/ID dan password terlebih dahulu')),
       );
       return;
     }
-    // TODO: ganti dengan panggilan API login.
+
+    final akun = _isDosen ? DummyData.akunDosen : DummyData.akunMahasiswa;
+    if (id != akun['id'] || pass != akun['password']) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ID atau password salah')),
+      );
+      return;
+    }
+
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

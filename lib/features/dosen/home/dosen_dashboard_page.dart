@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/format.dart';
 import '../../../core/widgets/app_widgets.dart';
 import '../../../shared/data/dummy_data.dart';
+import '../../../shared/models/models.dart';
 import '../../../shared/pages/jadwal_page.dart';
 import '../../auth/presentation/login_page.dart';
 import '../rekap_kehadiran/daftar_kehadiran_page.dart';
@@ -13,9 +15,56 @@ class DosenDashboardPage extends StatelessWidget {
   void _go(BuildContext context, Widget page) =>
       Navigator.push(context, MaterialPageRoute(builder: (_) => page));
 
+  Widget _kelasCard(BuildContext context, Course c) {
+    final badge = courseBadge(c);
+    return AppCard(
+      child: Row(children: [
+        const IconBox(icon: Icons.school),
+        const SizedBox(width: 13),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Flexible(
+                child: Text(c.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+              ),
+              if (badge != null) ...[const SizedBox(width: 6), badge],
+            ]),
+            const SizedBox(height: 5),
+            Text(c.time, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 3),
+            Text('Ruang ${c.room}  •  ${c.kelas}',
+                style: const TextStyle(color: Colors.grey, fontSize: 11)),
+          ]),
+        ),
+      ]),
+    );
+  }
+
+  Widget _kosong() => const AppCard(
+        padding: EdgeInsets.all(22),
+        child: Column(children: [
+          IconBox(icon: Icons.event_available, size: 56, iconSize: 30),
+          SizedBox(height: 12),
+          Text('Tidak ada kelas hari ini',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          SizedBox(height: 4),
+          Text('Anda tetap bisa membuat QR dari menu di bawah.',
+              style: TextStyle(color: Colors.grey, fontSize: 12)),
+        ]),
+      );
+
   @override
   Widget build(BuildContext context) {
-    final today = DummyData.courses.first;
+    // Kelas yang jadwalnya hari ini, diurutkan menurut jam mulai.
+    final hariIni = DummyData.courses.where((c) => c.isToday).toList()
+      ..sort((a, b) => a.mulaiMenit.compareTo(b.mulaiMenit));
+    // Kelas yang dibuka tombol "Buat QR": yang sedang berlangsung, atau yang pertama hari ini.
+    final utama = hariIni.isEmpty
+        ? DummyData.courses.first
+        : hariIni.firstWhere((c) => c.isOngoing, orElse: () => hariIni.first);
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -23,30 +72,34 @@ class DosenDashboardPage extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const DashboardHeader(name: DummyData.lecturerName, info: 'Dosen Pengampu'),
             const SizedBox(height: 25),
-            const SectionTitle('Kelas Hari Ini'),
-            AppCard(
-              child: Row(children: [
-                const IconBox(icon: Icons.school),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(today.name,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                    const SizedBox(height: 5),
-                    Text(today.time,
-                        style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                    const SizedBox(height: 3),
-                    Text('Ruang ${today.room}',
-                        style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                  ]),
-                ),
-              ]),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  const Text('Kelas Hari Ini',
+                      style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.ink)),
+                  Text(tanggalPanjang(DateTime.now()),
+                      style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                ],
+              ),
             ),
+            if (hariIni.isEmpty)
+              _kosong()
+            else
+              for (final c in hariIni) ...[
+                _kelasCard(context, c),
+                if (c != hariIni.last) const SizedBox(height: 12),
+              ],
             const SizedBox(height: 16),
             PrimaryButton(
               label: 'BUAT QR ABSENSI',
               icon: Icons.qr_code_2,
-              onPressed: () => _go(context, BuatQrPage(course: today)),
+              onPressed: () => _go(context, BuatQrPage(course: utama)),
             ),
             const SizedBox(height: 25),
             const SectionTitle('Menu'),
@@ -57,7 +110,7 @@ class DosenDashboardPage extends StatelessWidget {
                   title: 'Rekap',
                   subtitle: 'Absensi',
                   color: AppColors.primary,
-                  onTap: () => _go(context, const DaftarKehadiranPage()),
+                  onTap: () => _go(context, DaftarKehadiranPage(course: utama)),
                 ),
               ),
               const SizedBox(width: 12),
