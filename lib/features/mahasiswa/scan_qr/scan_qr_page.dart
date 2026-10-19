@@ -11,10 +11,12 @@ class ScanQrPage extends StatefulWidget {
 
 class _ScanQrPageState extends State<ScanQrPage> {
   final MobileScannerController _controller =
-      MobileScannerController();
+      MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
 
-  bool _isProcessing = false;
-  String? _hasilScan;
+  bool _processing = false;
+  bool _flashOn = false;
 
   @override
   void dispose() {
@@ -23,75 +25,142 @@ class _ScanQrPageState extends State<ScanQrPage> {
   }
 
   void _onDetect(BarcodeCapture capture) {
-    if (_isProcessing) return;
+    if (_processing) return;
 
     for (final barcode in capture.barcodes) {
-      final String? value = barcode.rawValue;
+      final value = barcode.rawValue;
 
-      if (value != null && value.isNotEmpty) {
-        _isProcessing = true;
-
-        setState(() {
-          _hasilScan = value;
-        });
-
+      if (value != null && value.trim().isNotEmpty) {
+        _processing = true;
         _controller.stop();
-        _tampilkanHasil(value);
-        break;
+        _showResult(value.trim());
+        return;
       }
     }
   }
 
-  Future<void> _tampilkanHasil(String value) async {
+  String _ambilNilai(String teks, String label) {
+    final lines = teks.split('\n');
+
+    for (final line in lines) {
+      if (line.toLowerCase().contains(label.toLowerCase())) {
+        final index = line.indexOf(':');
+        if (index != -1) {
+          return line.substring(index + 1).trim();
+        }
+      }
+    }
+
+    return '-';
+  }
+
+  Future<void> _showResult(String value) async {
     if (!mounted) return;
 
-    final bool formatAbsensi = value.startsWith('ABSENSI|');
+    final bool valid = value.toLowerCase().contains('mata kuliah') &&
+        value.toLowerCase().contains('no. token');
+
+    final mataKuliah = _ambilNilai(value, 'Mata Kuliah');
+    final hari = _ambilNilai(value, 'Hari');
+    final jam = _ambilNilai(value, 'Jam Kuliah');
+    final ruangan = _ambilNilai(value, 'Ruangan');
+    final kelas = _ambilNilai(value, 'Kelas');
+    final tanggal = _ambilNilai(value, 'Tanggal Scan');
+    final token = _ambilNilai(value, 'No. Token');
 
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        icon: Icon(
-          formatAbsensi
-              ? Icons.check_circle
-              : Icons.qr_code_scanner,
-          color: formatAbsensi ? Colors.green : Colors.blue,
-          size: 55,
-        ),
-        title: Text(
-          formatAbsensi ? 'QR Absensi Terbaca' : 'QR Code Terbaca',
-          textAlign: TextAlign.center,
-        ),
-        content: SingleChildScrollView(
-          child: SelectableText(
-            formatAbsensi
-                ? 'Data QR absensi berhasil dibaca.\n\n$value'
-                : 'Isi QR Code:\n\n$value\n\n'
-                  'QR terbaca, tetapi format absensi '
-                  'belum dapat diverifikasi.',
-            textAlign: TextAlign.center,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Scan Lagi'),
+          title: Column(
+            children: [
+              Icon(
+                valid ? Icons.check_circle : Icons.qr_code,
+                color: valid ? Colors.green : Colors.blue,
+                size: 55,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                valid ? 'QR Absensi Terbaca!' : 'QR Code Terbaca',
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
-        ],
-      ),
+          content: SingleChildScrollView(
+            child: valid
+                ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _detail('Mata Kuliah', mataKuliah),
+                      _detail('Hari', hari),
+                      _detail('Jam Kuliah', jam),
+                      _detail('Ruangan', ruangan),
+                      _detail('Kelas', kelas),
+                      _detail('Tanggal Scan', tanggal),
+                      _detail('No. Token', token),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'QR berhasil dibaca. '
+                        'Pencatatan kehadiran perlu divalidasi '
+                        'oleh sistem absensi.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ],
+                  )
+                : SelectableText(
+                    'Isi QR Code:\n\n$value',
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: const Text('Scan Lagi'),
+            ),
+          ],
+        );
+      },
     );
 
     if (!mounted) return;
 
     setState(() {
-      _hasilScan = null;
-      _isProcessing = false;
+      _processing = false;
     });
 
     await _controller.start();
+  }
+
+  Widget _detail(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            flex: 4,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+          const Text(': '),
+          Expanded(
+            flex: 5,
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -106,35 +175,32 @@ class _ScanQrPageState extends State<ScanQrPage> {
         centerTitle: true,
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF19345B),
-        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Column(
         children: [
-          const SizedBox(height: 24),
-
+          const SizedBox(height: 22),
           const Text(
             'Arahkan kamera ke QR Code absensi',
-            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Color(0xFF19345B),
             ),
-          ),
-
-          const SizedBox(height: 8),
-
-          const Text(
-            'Pastikan QR Code terlihat jelas di dalam kotak.',
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Pastikan QR Code terlihat jelas.',
             style: TextStyle(color: Colors.grey),
           ),
-
-          const SizedBox(height: 24),
-
+          const SizedBox(height: 20),
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(24),
                 child: Stack(
@@ -143,55 +209,49 @@ class _ScanQrPageState extends State<ScanQrPage> {
                     MobileScanner(
                       controller: _controller,
                       onDetect: _onDetect,
-                      errorBuilder: (
-                        context,
-                        error,
-                      ) {
-                        return Container(
-                          color: Colors.black,
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            'Kamera tidak dapat dibuka.\n'
-                            'Periksa izin kamera HP kamu.\n\n'
-                            '${error.errorCode.name}',
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: Colors.white,
+                      errorBuilder: (context, error) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Text(
+                              'Kamera gagal dibuka.\n'
+                              'Periksa izin kamera HP kamu.\n'
+                              '${error.errorCode.name}',
+                              textAlign: TextAlign.center,
                             ),
                           ),
                         );
                       },
                     ),
-
                     Center(
                       child: Container(
-                        width: 250,
-                        height: 250,
+                        width: 260,
+                        height: 260,
                         decoration: BoxDecoration(
                           border: Border.all(
                             color: Colors.greenAccent,
                             width: 4,
                           ),
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(22),
                         ),
                       ),
                     ),
-
-                    Positioned(
-                      bottom: 20,
-                      left: 12,
-                      right: 12,
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.black54,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Posisikan QR Code di tengah kotak',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white),
+                    const Positioned(
+                      left: 10,
+                      right: 10,
+                      bottom: 18,
+                      child: Text(
+                        'Letakkan QR Code di tengah kotak',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black,
+                              blurRadius: 5,
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -200,47 +260,39 @@ class _ScanQrPageState extends State<ScanQrPage> {
               ),
             ),
           ),
-
-          const SizedBox(height: 20),
-
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(20),
             child: Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () =>
-                        _controller.toggleTorch(),
-                    icon: const Icon(Icons.flash_on),
-                    label: const Text('Lampu Flash'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF246BFE),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
+                    onPressed: () async {
+                      await _controller.toggleTorch();
+                      if (mounted) {
+                        setState(() {
+                          _flashOn = !_flashOn;
+                        });
+                      }
+                    },
+                    icon: Icon(
+                      _flashOn ? Icons.flash_off : Icons.flash_on,
+                    ),
+                    label: Text(
+                      _flashOn ? 'Matikan Flash' : 'Lampu Flash',
                     ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () =>
-                        _controller.switchCamera(),
+                    onPressed: () => _controller.switchCamera(),
                     icon: const Icon(Icons.cameraswitch),
                     label: const Text('Ganti Kamera'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                      ),
-                    ),
                   ),
                 ),
               ],
             ),
           ),
-
-          const SizedBox(height: 24),
         ],
       ),
     );
