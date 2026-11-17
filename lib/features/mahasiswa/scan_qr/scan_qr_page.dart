@@ -1,4 +1,4 @@
-﻿import 'package:absensi_mahasiswa/services/api_service.dart';
+import 'package:absensi_mahasiswa/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -23,45 +23,25 @@ class _ScanQrPageState extends State<ScanQrPage> {
     super.dispose();
   }
 
-  Future<void> kirimAbsensi(String qrToken) async {
+  Future<void> _kirimAbsensi(String qrToken) async {
     try {
       final berhasil = await ApiService.scanQr(qrToken);
-
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             berhasil
                 ? 'Absensi berhasil disimpan'
-                : 'Absensi gagal atau QR tidak valid',
+                : 'QR tidak valid, kedaluwarsa, atau sudah digunakan',
           ),
         ),
       );
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Terjadi kesalahan: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Terjadi kesalahan: $e')));
     }
-  }
-
-  String _ambilNilai(String teks, String label) {
-    final lines = teks.split('\n');
-
-    for (final line in lines) {
-      if (line.toLowerCase().contains(label.toLowerCase())) {
-        final index = line.indexOf(':');
-        if (index != -1) {
-          return line.substring(index + 1).trim();
-        }
-      }
-    }
-
-    return '-';
   }
 
   Future<void> _onDetect(BarcodeCapture capture) async {
@@ -74,121 +54,15 @@ class _ScanQrPageState extends State<ScanQrPage> {
       _processing = true;
     });
 
-    await _controller.stop();
-    await _showResult(rawValue);
-  }
-
-  Future<void> _showResult(String value) async {
-    if (!mounted) return;
-
-    final bool valid = value.toLowerCase().contains('mata kuliah') &&
-        value.toLowerCase().contains('no. token');
-
-    final mataKuliah = _ambilNilai(value, 'Mata Kuliah');
-    final hari = _ambilNilai(value, 'Hari');
-    final jam = _ambilNilai(value, 'Jam Kuliah');
-    final ruangan = _ambilNilai(value, 'Ruangan');
-    final kelas = _ambilNilai(value, 'Kelas');
-    final tanggal = _ambilNilai(value, 'Tanggal Scan');
-    final token = _ambilNilai(value, 'No. Token');
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Column(
-            children: [
-              Icon(
-                valid ? Icons.check_circle : Icons.qr_code,
-                color: valid ? Colors.green : Colors.blue,
-                size: 55,
-              ),
-              const SizedBox(height: 10),
-              Text(
-                valid ? 'QR Absensi Terbaca!' : 'QR Code Terbaca',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: valid
-                ? Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _detail('Mata Kuliah', mataKuliah),
-                      _detail('Hari', hari),
-                      _detail('Jam Kuliah', jam),
-                      _detail('Ruangan', ruangan),
-                      _detail('Kelas', kelas),
-                      _detail('Tanggal Scan', tanggal),
-                      _detail('No. Token', token),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'QR berhasil dibaca. '
-                        'Pencatatan kehadiran perlu divalidasi '
-                        'oleh sistem absensi.',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
-                  )
-                : SelectableText(
-                    'Isi QR Code:\n\n$value',
-                  ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const Text('Scan Lagi'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (valid && token != '-' && mounted) {
-      await kirimAbsensi(token);
+    try {
+      await _controller.stop();
+      await _kirimAbsensi(rawValue);
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+        await _controller.start();
+      }
     }
-
-    if (!mounted) return;
-
-    setState(() {
-      _processing = false;
-    });
-
-    await _controller.start();
-  }
-
-  Widget _detail(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 4,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          const Text(': '),
-          Expanded(
-            flex: 5,
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -274,12 +148,7 @@ class _ScanQrPageState extends State<ScanQrPage> {
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black,
-                              blurRadius: 5,
-                            ),
-                          ],
+                          shadows: [Shadow(color: Colors.black, blurRadius: 5)],
                         ),
                       ),
                     ),
@@ -302,12 +171,8 @@ class _ScanQrPageState extends State<ScanQrPage> {
                         });
                       }
                     },
-                    icon: Icon(
-                      _flashOn ? Icons.flash_off : Icons.flash_on,
-                    ),
-                    label: Text(
-                      _flashOn ? 'Matikan Flash' : 'Lampu Flash',
-                    ),
+                    icon: Icon(_flashOn ? Icons.flash_off : Icons.flash_on),
+                    label: Text(_flashOn ? 'Matikan Flash' : 'Lampu Flash'),
                   ),
                 ),
                 const SizedBox(width: 12),
