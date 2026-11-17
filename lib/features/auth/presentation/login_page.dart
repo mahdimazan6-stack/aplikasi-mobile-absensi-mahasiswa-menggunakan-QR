@@ -4,6 +4,7 @@ import '../../../core/widgets/app_widgets.dart';
 import '../../dosen/home/dosen_dashboard_page.dart';
 import '../../mahasiswa/home/mahasiswa_dashboard_page.dart';
 import '../../../shared/data/dummy_data.dart';
+import '../../../services/api_service.dart';
 
 enum UserRole { mahasiswa, dosen }
 
@@ -13,6 +14,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
+
 class _LoginPageState extends State<LoginPage> {
   final _idCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
@@ -21,33 +23,58 @@ class _LoginPageState extends State<LoginPage> {
 
   bool get _isDosen => _role == UserRole.dosen;
 
-  void _login() {
-    final id = _idCtrl.text.trim();
-    final pass = _passCtrl.text;
+  
+Future<void> _login() async {
+  final id = _idCtrl.text.trim();
+  final pass = _passCtrl.text;
 
-    if (id.isEmpty || pass.isEmpty) {
+  if (id.isEmpty || pass.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Isi NIM dan password terlebih dahulu'),
+      ),
+    );
+    return;
+  }
+
+  try {
+    final berhasil = await ApiService.login(id, pass);
+
+    if (!mounted) return;
+
+    if (!berhasil) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Isi email/ID dan password terlebih dahulu')),
+        const SnackBar(
+          content: Text('NIM atau password salah'),
+        ),
       );
       return;
     }
 
-    final akun = _isDosen ? DummyData.akunDosen : DummyData.akunMahasiswa;
-    if (id != akun['id'] || pass != akun['password']) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ID atau password salah')),
-      );
-      return;
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Login berhasil'),
+      ),
+    );
 
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            _isDosen ? const DosenDashboardPage() : const MahasiswaDashboardPage(),
+        builder: (_) => _isDosen
+            ? const DosenDashboardPage()
+            : const MahasiswaDashboardPage(),
+      ),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Gagal menghubungkan ke server: $e'),
       ),
     );
   }
+}
 
   @override
   void dispose() {
