@@ -1,4 +1,4 @@
-
+﻿import 'package:absensi_mahasiswa/services/api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -10,8 +10,7 @@ class ScanQrPage extends StatefulWidget {
 }
 
 class _ScanQrPageState extends State<ScanQrPage> {
-  final MobileScannerController _controller =
-      MobileScannerController(
+  final MobileScannerController _controller = MobileScannerController(
     detectionSpeed: DetectionSpeed.noDuplicates,
   );
 
@@ -24,18 +23,29 @@ class _ScanQrPageState extends State<ScanQrPage> {
     super.dispose();
   }
 
-  void _onDetect(BarcodeCapture capture) {
-    if (_processing) return;
+  Future<void> kirimAbsensi(String qrToken) async {
+    try {
+      final berhasil = await ApiService.scanQr(qrToken);
 
-    for (final barcode in capture.barcodes) {
-      final value = barcode.rawValue;
+      if (!mounted) return;
 
-      if (value != null && value.trim().isNotEmpty) {
-        _processing = true;
-        _controller.stop();
-        _showResult(value.trim());
-        return;
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            berhasil
+                ? 'Absensi berhasil disimpan'
+                : 'Absensi gagal atau QR tidak valid',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+        ),
+      );
     }
   }
 
@@ -52,6 +62,20 @@ class _ScanQrPageState extends State<ScanQrPage> {
     }
 
     return '-';
+  }
+
+  Future<void> _onDetect(BarcodeCapture capture) async {
+    if (_processing) return;
+
+    final rawValue = capture.barcodes.firstOrNull?.rawValue;
+    if (rawValue == null || rawValue.isEmpty) return;
+
+    setState(() {
+      _processing = true;
+    });
+
+    await _controller.stop();
+    await _showResult(rawValue);
   }
 
   Future<void> _showResult(String value) async {
@@ -130,6 +154,10 @@ class _ScanQrPageState extends State<ScanQrPage> {
         );
       },
     );
+
+    if (valid && token != '-' && mounted) {
+      await kirimAbsensi(token);
+    }
 
     if (!mounted) return;
 
