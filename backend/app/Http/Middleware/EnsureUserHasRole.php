@@ -11,8 +11,7 @@ class EnsureUserHasRole
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
         $user = $request->user();
-
-        abort_unless($user && in_array($user->role, $roles, true), 403);
+        abort_unless($user && $user->is_active && in_array($user->role, $roles, true), 403);
 
         return $next($request);
     }
