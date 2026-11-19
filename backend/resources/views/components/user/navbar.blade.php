@@ -11,11 +11,13 @@
 
     <div class="flex items-center gap-4">
         <div class="text-right">
-            <p class="text-sm font-medium">Yanuar Abdullah Ammardian</p>
-            <p class="text-xs text-slate-500">IT</p>
+            <p class="text-sm font-medium">{{ auth()->user()->name }}</p>
+            <p class="text-xs text-slate-500">{{ ucfirst(auth()->user()->role) }}</p>
         </div>
 
-        <div class="w-10 h-10 rounded-full bg-slate-300"></div>
+        <div class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-300 font-semibold text-slate-700">
+            {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+        </div>
     </div>
 
 </nav>
