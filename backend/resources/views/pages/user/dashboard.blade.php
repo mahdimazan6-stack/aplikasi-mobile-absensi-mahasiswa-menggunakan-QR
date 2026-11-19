@@ -1,85 +1,70 @@
 @extends('layouts.user')
 
 @section('title', 'Dashboard')
-@if(session('success'))
-    <x-toast type="success" :message="session('success')" />
-@endif
-@if(session('error'))
-    <x-toast type="error" :message="session('error')" />
-@endif
+
 @section('content')
+    <div class="mx-auto max-w-5xl">
+        <h1 class="text-2xl font-semibold">Halo, {{ auth()->user()->name }}</h1>
+        <p class="mb-6 text-sm text-slate-500">{{ ucfirst(auth()->user()->role) }} · {{ auth()->user()->nim }}</p>
 
-    <div class="max-w-xl mx-auto">
+        @if(auth()->user()->role === 'mahasiswa')
+            <section class="mb-6 rounded-2xl border bg-white p-6 shadow-sm">
+                <h2 class="mb-4 text-lg font-semibold">Absensi hari ini</h2>
+                @forelse($todayAttendance as $item)
+                    <div class="flex items-center justify-between border-b py-3 last:border-0">
+                        <div>
+                            <p class="font-medium">{{ $item->session->course->name }}</p>
+                            <p class="text-xs text-slate-500">{{ $item->attended_at?->format('H:i') ?? 'Tidak ada waktu scan' }}</p>
+                        </div>
+                        <x-status :status="$item->status" />
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">Belum ada sesi absensi yang ditutup hari ini.</p>
+                @endforelse
+                <p class="mt-4 text-xs text-slate-500">Untuk mencatat kehadiran, pindai QR sesi dosen melalui aplikasi mobile.</p>
+            </section>
 
-        <h1 class="text-2xl font-semibold mb-6">Absensi Hari Ini</h1>
-
-        <div class="bg-white border rounded-2xl p-6 shadow-sm">
-
-            {{-- STATUS --}}
-            <div class="mb-6">
-                <p class="text-sm text-slate-500">Status Hari Ini</p>
-
-                <div class="mt-2">
-                    <x-status :status="$today['status']" />
+            <section class="rounded-2xl border bg-white p-6 shadow-sm">
+                <h2 class="mb-4 text-lg font-semibold">Mata kuliah terdaftar</h2>
+                <div class="grid gap-3 md:grid-cols-2">
+                    @forelse($courses as $course)
+                        <div class="rounded-xl border p-4">
+                            <p class="font-medium">{{ $course->name }}</p>
+                            <p class="text-sm text-slate-500">{{ $course->code }} · {{ $course->day }}, {{ $course->time }}</p>
+                            <p class="text-sm text-slate-500">{{ $course->room }} {{ $course->kelas ? '· '.$course->kelas : '' }}</p>
+                        </div>
+                    @empty
+                        <p class="text-sm text-slate-500">Belum didaftarkan ke mata kuliah. Hubungi administrator.</p>
+                    @endforelse
                 </div>
+            </section>
+        @else
+            <section class="mb-6 rounded-2xl border bg-white p-6 shadow-sm">
+                <h2 class="mb-4 text-lg font-semibold">Sesi yang dibuat hari ini</h2>
+                @forelse($todaySessions as $session)
+                    <div class="flex items-center justify-between border-b py-3 last:border-0">
+                        <div>
+                            <p class="font-medium">{{ $session->course->name }}</p>
+                            <p class="text-xs text-slate-500">Dibuat {{ $session->created_at->format('H:i') }}</p>
+                        </div>
+                        <x-status :status="$session->ended_at ? 'selesai' : ($session->expires_at->isPast() ? 'kedaluwarsa' : 'aktif')" />
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">Belum ada sesi absensi hari ini. Buat sesi melalui aplikasi mobile.</p>
+                @endforelse
+            </section>
 
-                <p class="text-sm text-slate-500 mt-2">
-
-                    Jam Masuk:
-                    {{ \Carbon\Carbon::parse($today['jam_masuk'])->format('H:i') }}
-                    <br>
-
-                    Check In:
-                    {{ $today['check_in']
-        ? \Carbon\Carbon::parse($today['check_in'])->format('H:i')
-        : '-' 
-            }}
-                    <br>
-
-                    Check Out:
-                    {{ $today['check_out']
-        ? \Carbon\Carbon::parse($today['check_out'])->format('H:i')
-        : '-' 
-            }}
-
-                </p>
-
-                @if($today['status'] === 'alpha')
-                    <p class="text-xs text-slate-400 mt-1">
-                        Belum melakukan absensi hari ini
-                    </p>
-                @endif
-
-            </div>
-
-            {{-- BUTTONS --}}
-            <form method="POST" action="{{ route('user.checkin') }}" class="mb-3">
-                @csrf
-                <button onclick="return confirm('Yakin mau check in?')"
-                    class="w-full bg-slate-900 text-white py-2 rounded-lg hover:bg-slate-800">
-                    Check In
-                </button>
-            </form>
-
-            <form method="POST" action="{{ route('user.checkout') }}" class="mb-3">
-                @csrf
-                <button onclick="return confirm('Yakin mau check out?')"
-                    class="mt-3 w-full bg-slate-900 text-white py-2 rounded-lg hover:bg-slate-800">
-                    Check Out
-                </button>
-            </form>
-
-            <form method="POST" action="{{ route('user.reset') }}">
-                @csrf
-
-                <button class="w-full mt-4 bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition">
-                    Reset Absensi
-                </button>
-
-            </form>
-
-        </div>
-
+            <section class="rounded-2xl border bg-white p-6 shadow-sm">
+                <h2 class="mb-4 text-lg font-semibold">Mata kuliah diampu</h2>
+                @forelse($courses as $course)
+                    <div class="border-b py-3 last:border-0">
+                        <p class="font-medium">{{ $course->name }}</p>
+                        <p class="text-sm text-slate-500">{{ $course->code }} · {{ $course->day }}, {{ $course->time }} · {{ $course->room }}</p>
+                    </div>
+                @empty
+                    <p class="text-sm text-slate-500">Belum ada mata kuliah yang ditugaskan.</p>
+                @endforelse
+            </section>
+        @endif
     </div>
-
 @endsection
