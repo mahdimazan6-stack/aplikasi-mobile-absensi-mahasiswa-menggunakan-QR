@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -13,18 +14,23 @@ class ApiService {
     'API_BASE_URL',
     defaultValue: 'http://10.0.2.2:8000/api',
   );
-  static String _activeBaseUrl = _configuredBaseUrl;
+  static String _activeBaseUrl = kIsWeb
+      ? 'http://127.0.0.1:8000/api'
+      : _configuredBaseUrl;
 
   static String get baseUrl => _activeBaseUrl;
 
   static Future<bool> login(String nim, String password) async {
     final candidates = <String>[
-      if (_apiBaseUrlOverride.isEmpty) ...[
-        'http://127.0.0.1:8000/api',
+      if (_apiBaseUrlOverride.isNotEmpty)
+        _configuredBaseUrl
+      else if (kIsWeb)
+        'http://127.0.0.1:8000/api'
+      else ...[
         _configuredBaseUrl,
         'http://192.168.1.9:8000/api',
-      ] else
-        _configuredBaseUrl,
+        'http://127.0.0.1:8000/api',
+      ],
     ];
 
     http.Response? response;
