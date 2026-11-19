@@ -51,7 +51,11 @@ class AttendanceRecord {
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
     final session = json['session'] as Map<String, dynamic>?;
     final course = session?['course'] as Map<String, dynamic>?;
-    final attendedAt = DateTime.tryParse(json['attended_at']?.toString() ?? '');
+    final attendanceDate = json['attended_at']?.toString()
+        ?? session?['created_at']?.toString()
+        ?? json['created_at']?.toString()
+        ?? '';
+    final attendedAt = DateTime.tryParse(attendanceDate);
 
     if (attendedAt == null) {
       throw const FormatException('Waktu absensi dari server tidak valid.');
