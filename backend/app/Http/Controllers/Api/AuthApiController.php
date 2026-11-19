@@ -20,7 +20,12 @@ class AuthApiController extends Controller
 
         $user = User::where('nim', $request->nim)->first();
 
-        if (!$user || !Hash::check($request->password, $user->password)) {
+        if (
+            ! $user
+            || ! $user->is_active
+            || ! in_array($user->role, ['mahasiswa', 'dosen'], true)
+            || ! Hash::check($request->password, $user->password)
+        ) {
             return response()->json(['message' => 'NIM atau password salah'], 401);
         }
 
@@ -40,6 +45,7 @@ class AuthApiController extends Controller
     public function me(Request $request): JsonResponse
     {
         $user = $request->user();
+
         return response()->json([
             'user' => [
                 'name' => $user->name,
@@ -52,6 +58,7 @@ class AuthApiController extends Controller
     public function logout(Request $request): JsonResponse
     {
         $request->user()->update(['api_token' => null]);
+
         return response()->json(['message' => 'Logout berhasil']);
     }
 }
