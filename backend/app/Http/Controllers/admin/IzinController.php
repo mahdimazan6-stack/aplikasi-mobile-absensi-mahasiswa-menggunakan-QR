@@ -3,64 +3,67 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Attendance;
+use App\Models\LeaveRequest;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 
 class IzinController extends Controller
 {
-    // lihat semua izin
-    public function index()
+    public function index(): View
     {
-        $izin = session('izin', []);
-
         return view('pages.admin.izin', [
-            'izin' => $this->sanitizeIzin($izin)
+            'izin' => LeaveRequest::query()
+                ->with(['student:id,name,nim', 'course:id,name,code'])
+                ->latest()
+                ->paginate(25),
         ]);
     }
 
-    // approve izin
-    public function approve($id)
+    public function approve(LeaveRequest $leaveRequest): RedirectResponse
     {
-        $izin = session('izin', []);
+        return $this->review($leaveRequest, 'approved');
+    }
 
-        foreach ($izin as &$item) {
+    public function reject(LeaveRequest $leaveRequest): RedirectResponse
+    {
+        return $this->review($leaveRequest, 'rejected');
+    }
 
-            if (($item['id'] ?? null) == $id) {
-                $item['status'] = 'Disetujui';
-            }
+    public function downloadAttachment(LeaveRequest $leaveRequest)
+    {
+        abort_unless($leaveRequest->attachment_path, 404);
+        abort_unless(Storage::disk('local')->exists($leaveRequest->attachment_path), 404);
 
+        return Storage::disk('local')->download($leaveRequest->attachment_path);
+    }
+
+    private function review(LeaveRequest $leaveRequest, string $status): RedirectResponse
+    {
+        if ($leaveRequest->status !== 'pending') {
+            return back()->with('error', 'Permohonan ini sudah diproses.');
         }
 
-        session()->put('izin', $izin);
+        DB::transaction(function () use ($leaveRequest, $status): void {
+            $leaveRequest->update([
+                'status' => $status,
+                'reviewed_by' => auth()->id(),
+                'reviewed_at' => now(),
+            ]);
 
-        return back();
-    }
-    public function reject($id)
-    {
-        $izin = session('izin', []);
-
-        foreach ($izin as &$item) {
-
-            if (($item['id'] ?? null) == $id) {
-                $item['status'] = 'Ditolak';
+            if ($status === 'approved') {
+                Attendance::query()
+                    ->where('student_id', $leaveRequest->student_id)
+                    ->where('status', 'alpa')
+                    ->whereHas('session', fn ($query) => $query
+                        ->where('course_id', $leaveRequest->course_id)
+                        ->whereDate('created_at', $leaveRequest->request_date))
+                    ->update(['status' => 'izin']);
             }
+        });
 
-        }
-
-        session()->put('izin', $izin);
-
-        return back();
-    }
-    private function sanitizeIzin($data)
-    {
-        return array_map(function ($item) {
-            return [
-                'id' => $item['id'] ?? uniqid(),
-                'nama' => $item['nama'] ?? 'Unknown',
-                'tanggal' => $item['tanggal'] ?? date('Y-m-d'),
-                'alasan' => $item['alasan'] ?? '-',
-                'file' => $item['file'] ?? null,
-                'status' => $item['status'] ?? 'Pending',
-            ];
-        }, $data);
+        return back()->with('success', $status === 'approved' ? 'Permohonan disetujui.' : 'Permohonan ditolak.');
     }
 }
