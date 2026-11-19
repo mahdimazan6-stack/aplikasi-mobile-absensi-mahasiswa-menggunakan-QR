@@ -22,7 +22,7 @@
             @foreach($traffic as $item)
                 <div class="flex flex-col items-center">
                     <div class="w-10 bg-slate-700 rounded-t-lg hover:bg-slate-900 transition"
-                        style="height: {{ $item['jumlah'] * 2 }}px">
+                        style="height: {{ min($item['jumlah'] * 2, 200) }}px">
                     </div>
 
                     <span class="text-xs mt-2 text-slate-500">
