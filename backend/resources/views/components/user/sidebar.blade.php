@@ -12,20 +12,20 @@
             Absen
         </a>
 
-        {{-- LAPORAN --}}
-        <a href="{{ route('user.laporan') }}" class="block px-4 py-2 rounded-lg
-           {{ request()->routeIs('user.laporan') ? 'bg-slate-800 text-white' : 'hover:bg-slate-100' }}">
-            Laporan Absensi
-        </a>
+        @if(auth()->user()->role === 'mahasiswa')
+            <a href="{{ route('user.laporan') }}" class="block px-4 py-2 rounded-lg
+               {{ request()->routeIs('user.laporan') ? 'bg-slate-800 text-white' : 'hover:bg-slate-100' }}">
+                Laporan Absensi
+            </a>
 
-        {{-- PERIZINAN --}}
-        <a href="{{ route('user.izin') }}" class="block px-4 py-2 rounded-lg
-           {{ request()->routeIs('user.izin') ? 'bg-slate-800 text-white' : 'hover:bg-slate-100' }}">
-            Perizinan
-        </a>
+            <a href="{{ route('user.izin') }}" class="block px-4 py-2 rounded-lg
+               {{ request()->routeIs('user.izin*') ? 'bg-slate-800 text-white' : 'hover:bg-slate-100' }}">
+                Perizinan
+            </a>
+        @endif
 
         {{-- LOGOUT (PALING BAWAH) --}}
-        <form method="POST" action="/logout" class="pt-6">
+        <form method="POST" action="{{ route('logout') }}" class="pt-6">
             @csrf
             <button class="w-full text-left px-4 py-2 rounded-lg text-red-500 hover:bg-red-50">
                 Logout
