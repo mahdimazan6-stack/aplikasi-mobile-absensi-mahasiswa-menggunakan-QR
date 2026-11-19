@@ -21,7 +21,7 @@ class ApiService {
     final candidates = <String>[
       if (_apiBaseUrlOverride.isEmpty) ...[
         _configuredBaseUrl,
-        'http://10.172.25.241:8000/api',
+        'http://192.168.1.9:8000/api',
         'http://127.0.0.1:8000/api',
       ] else
         _configuredBaseUrl,
