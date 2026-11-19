@@ -20,9 +20,9 @@ class ApiService {
   static Future<bool> login(String nim, String password) async {
     final candidates = <String>[
       if (_apiBaseUrlOverride.isEmpty) ...[
+        'http://127.0.0.1:8000/api',
         _configuredBaseUrl,
         'http://192.168.1.9:8000/api',
-        'http://127.0.0.1:8000/api',
       ] else
         _configuredBaseUrl,
     ];
