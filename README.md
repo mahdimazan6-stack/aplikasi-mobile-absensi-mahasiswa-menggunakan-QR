@@ -2,7 +2,31 @@
 
 Flutter application for student attendance.
 
+## Project structure
+
+The project now contains both applications:
+
+- `lib/` - Flutter student attendance application
+- `android/`, `ios/`, `web/`, `linux/`, `macos/`, `windows/` - Flutter platform targets
+- `backend/` - Laravel attendance backend source
+
 ## Connecting to the API
+
+### Starting the Laravel backend
+
+From the project root:
+
+```sh
+cd backend
+copy .env.example .env
+composer install
+php artisan key:generate
+type nul > database\database.sqlite
+php artisan migrate --seed
+php artisan serve --host=0.0.0.0 --port=8000
+```
+
+The backend is configured to use SQLite by default.
 
 The default API URL is `http://192.168.1.9:8000/api`. If using Laravel, start
 the API server so it accepts emulator connections:
