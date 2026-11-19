@@ -16,13 +16,20 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email'],
+            'email' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
         ]);
+        $identifier = trim($credentials['email']);
+        $loginField = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'nim';
+        $authCredentials = [
+            $loginField => $identifier,
+            'password' => $credentials['password'],
+            'is_active' => true,
+        ];
 
-        if (! Auth::attempt($credentials)) {
+        if (! Auth::attempt($authCredentials)) {
             return back()
-                ->withErrors(['email' => 'Email atau password tidak sesuai.'])
+                ->withErrors(['email' => 'Email/NIM atau password tidak sesuai.'])
                 ->onlyInput('email');
         }
 
