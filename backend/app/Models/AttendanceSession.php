@@ -4,10 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AttendanceSession extends Model
 {
+    protected $hidden = [
+        'qr_token',
+    ];
+
     protected $fillable = [
         'course_id',
         'lecturer_id',
@@ -37,5 +42,11 @@ class AttendanceSession extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);
+    }
+
+    public function students(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'attendance_session_students', 'attendance_session_id', 'student_id')
+            ->withTimestamps();
     }
 }
