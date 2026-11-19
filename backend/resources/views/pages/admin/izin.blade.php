@@ -4,7 +4,7 @@
 
     <div class="mb-6">
         <h1 class="text-2xl font-semibold">Permohonan Izin</h1>
-        <p class="text-slate-500 text-sm">Kelola pengajuan izin karyawan</p>
+        <p class="text-slate-500 text-sm">Kelola pengajuan izin mahasiswa</p>
     </div>
 
     <div class="bg-white rounded-2xl border shadow-sm p-6">
@@ -13,10 +13,10 @@
 
             <thead>
                 <tr class="border-b text-slate-500 text-left">
-                    <th class="py-3 w-[18%]">Nama</th>
-                    <th class="py-3 w-[15%]">Tanggal</th>
+                    <th class="py-3 w-[15%]">Mahasiswa</th>
+                    <th class="py-3 w-[15%]">Mata Kuliah / Tanggal</th>
                     <th class="py-3 w-[25%]">Alasan</th>
-                    <th class="py-3 w-[12%]">File</th>
+                    <th class="py-3 w-[12%]">Lampiran</th>
                     <th class="py-3 w-[15%]">Status</th>
                     <th class="py-3 w-[15%] text-right">Aksi</th>
                 </tr>
@@ -30,25 +30,27 @@
 
                         {{-- NAMA --}}
                         <td class="py-3 font-medium">
-                            {{ $item['nama'] }}
+                            {{ $item->student->name }}<br>
+                            <span class="text-xs text-slate-500">{{ $item->student->nim }}</span>
                         </td>
 
                         {{-- TANGGAL --}}
                         <td class="py-3 text-slate-600">
-                            {{ $item['tanggal'] }}
+                            {{ $item->course->name }}<br>
+                            <span class="text-xs text-slate-500">{{ $item->request_date->format('d M Y') }}</span>
                         </td>
 
                         {{-- ALASAN --}}
                         <td class="py-3 text-slate-700">
-                            {{ $item['alasan'] }}
+                            {{ $item->reason }}
                         </td>
 
                         {{-- FILE --}}
                         <td class="py-3">
-                            @if(!empty($item['file']))
-                                <span class="text-blue-600 text-sm">
-                                    {{ $item['file'] }}
-                                </span>
+                            @if($item->attachment_path)
+                                <a href="{{ route('admin.izin.attachment', $item) }}" class="text-blue-600 text-sm underline">
+                                    Unduh lampiran
+                                </a>
                             @else
                                 <span class="text-slate-400 text-xs">Tidak ada</span>
                             @endif
@@ -56,16 +58,16 @@
 
                         {{-- STATUS --}}
                         <td class="py-3">
-                            <x-status :status="$item['status']" />
+                            <x-status :status="$item->status" />
                         </td>
 
                         {{-- AKSI --}}
                         <td class="py-3 text-right space-x-2">
 
-                            @if($item['status'] == 'Pending')
+                            @if($item->status === 'pending')
 
                                 {{-- APPROVE --}}
-                                <form method="POST" action="{{ route('admin.izin.approve', $item['id']) }}" class="inline">
+                                <form method="POST" action="{{ route('admin.izin.approve', $item) }}" class="inline">
                                     @csrf
 
                                     <x-admin.button type="submit" color="green">
@@ -74,7 +76,7 @@
                                 </form>
 
                                 {{-- REJECT --}}
-                                <form method="POST" action="{{ route('admin.izin.reject', $item['id']) }}" class="inline">
+                                <form method="POST" action="{{ route('admin.izin.reject', $item) }}" class="inline">
                                     @csrf
 
                                     <x-admin.button type="submit" color="red">
@@ -105,6 +107,7 @@
             </tbody>
 
         </table>
+        <div class="mt-4">{{ $izin->links() }}</div>
 
     </div>
 
