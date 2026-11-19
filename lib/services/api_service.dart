@@ -6,20 +6,53 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../shared/models/models.dart';
 
 class ApiService {
-  static const String baseUrl = String.fromEnvironment(
+  static const String _apiBaseUrlOverride = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.1.9:8000/api',
   );
+  static const String _configuredBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'http://10.0.2.2:8000/api',
+  );
+  static String _activeBaseUrl = _configuredBaseUrl;
+
+  static String get baseUrl => _activeBaseUrl;
 
   static Future<bool> login(String nim, String password) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/login'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'nim': nim, 'password': password}),
-    );
+    final candidates = <String>[
+      if (_apiBaseUrlOverride.isEmpty) ...[
+        _configuredBaseUrl,
+        'http://10.172.25.241:8000/api',
+        'http://127.0.0.1:8000/api',
+      ] else
+        _configuredBaseUrl,
+    ];
+
+    http.Response? response;
+    for (final candidate in candidates) {
+      try {
+        response = await http
+            .post(
+              Uri.parse('$candidate/login'),
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({'nim': nim, 'password': password}),
+            )
+            .timeout(const Duration(seconds: 5));
+        _activeBaseUrl = candidate;
+        break;
+      } on Exception {
+        continue;
+      }
+    }
+
+    if (response == null) {
+      throw Exception(
+        'Backend tidak dapat dihubungi. Pastikan server Laravel aktif '
+        'dan alamat API sesuai emulator atau perangkat.',
+      );
+    }
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
