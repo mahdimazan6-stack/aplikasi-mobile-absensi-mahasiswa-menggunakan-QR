@@ -11,14 +11,14 @@
             Dashboard
         </a>
 
-        <a href="{{ route('admin.karyawan.index') }}" class="block px-4 py-2 rounded-lg 
-           {{ request()->routeIs('admin.karyawan.*') ? 'bg-slate-800 text-white' : 'hover:bg-slate-100' }}">
-            Karyawan
+        <a href="{{ route('admin.pengguna.index') }}" class="block px-4 py-2 rounded-lg
+           {{ request()->routeIs('admin.pengguna.*') ? 'bg-slate-800 text-white' : 'hover:bg-slate-100' }}">
+            Mahasiswa &amp; Dosen
         </a>
 
-        <a href="{{ route('admin.divisi.index') }}" class="block px-4 py-2 rounded-lg 
-           {{ request()->routeIs('admin.divisi.*') ? 'bg-slate-800 text-white' : 'hover:bg-slate-100' }}">
-            Divisi
+        <a href="{{ route('admin.mata-kuliah.index') }}" class="block px-4 py-2 rounded-lg
+           {{ request()->routeIs('admin.mata-kuliah.*') ? 'bg-slate-800 text-white' : 'hover:bg-slate-100' }}">
+            Mata Kuliah
         </a>
 
         <a href="{{ route('admin.kehadiran.index') }}" class="block px-4 py-2 rounded-lg 
