@@ -11,6 +11,26 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $adminEmail = config('admin.email');
+        $adminPassword = config('admin.password');
+
+        if (blank($adminEmail) !== blank($adminPassword)) {
+            throw new \RuntimeException('Set both ADMIN_EMAIL and ADMIN_PASSWORD to seed the admin account.');
+        }
+
+        if (filled($adminEmail)) {
+            User::updateOrCreate(
+                ['email' => $adminEmail],
+                [
+                    'name' => config('admin.name'),
+                    'password' => Hash::make($adminPassword),
+                    'role' => 'admin',
+                ],
+            );
+        } else {
+            $this->command?->warn('Admin account skipped. Set ADMIN_EMAIL and ADMIN_PASSWORD before seeding.');
+        }
+
         User::updateOrCreate(
             ['nim' => '3312511074'],
             [
