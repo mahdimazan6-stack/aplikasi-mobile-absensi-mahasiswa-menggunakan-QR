@@ -1,8 +1,10 @@
 <?php
+
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AuthController extends Controller
 {
@@ -13,18 +15,43 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        // dummy login (sementara)
-        $email = $request->email;
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
+        ]);
 
-        if ($email === 'admin@gmail.com') {
-            return redirect('/admin/dashboard');
-        } else {
-            return redirect('/user/dashboard');
+        if (! Auth::attempt($credentials)) {
+            return back()
+                ->withErrors(['email' => 'Email atau password tidak sesuai.'])
+                ->onlyInput('email');
         }
+
+        $request->session()->regenerate();
+
+        if ($request->user()->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if (in_array($request->user()->role, ['mahasiswa', 'dosen'], true)) {
+            return redirect()->route('user.dashboard');
+        }
+
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect('/login')->withErrors([
+            'email' => 'Akun ini tidak memiliki akses ke aplikasi web.',
+        ]);
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
-        return redirect('/login');
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
     }
 }
