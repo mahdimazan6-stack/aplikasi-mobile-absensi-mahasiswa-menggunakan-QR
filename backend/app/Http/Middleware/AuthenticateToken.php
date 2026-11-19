@@ -13,18 +13,19 @@ class AuthenticateToken
     {
         $authorization = $request->header('Authorization', '');
 
-        if (!str_starts_with($authorization, 'Bearer ')) {
+        if (! str_starts_with($authorization, 'Bearer ')) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
         $token = substr($authorization, 7);
         $user = User::where('api_token', hash('sha256', $token))->first();
 
-        if (!$user) {
+        if (! $user || ! $user->is_active) {
             return response()->json(['message' => 'Unauthorized'], 401);
         }
 
         $request->setUserResolver(fn () => $user);
+
         return $next($request);
     }
 }
