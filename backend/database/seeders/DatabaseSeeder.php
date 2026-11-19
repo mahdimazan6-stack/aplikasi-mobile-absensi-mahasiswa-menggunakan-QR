@@ -31,7 +31,11 @@ class DatabaseSeeder extends Seeder
             $this->command?->warn('Admin account skipped. Set ADMIN_EMAIL and ADMIN_PASSWORD before seeding.');
         }
 
-        User::updateOrCreate(
+        if (app()->environment('production')) {
+            return;
+        }
+
+        $student = User::updateOrCreate(
             ['nim' => '3312511074'],
             [
                 'name' => 'Mahdi Muhammad',
@@ -41,7 +45,7 @@ class DatabaseSeeder extends Seeder
             ],
         );
 
-        User::updateOrCreate(
+        $lecturer = User::updateOrCreate(
             ['nim' => '3312511138'],
             [
                 'name' => 'Dr. Syam',
@@ -62,7 +66,9 @@ class DatabaseSeeder extends Seeder
         ];
 
         foreach ($courses as $course) {
-            Course::updateOrCreate(['code' => $course['code']], $course);
+            $model = Course::updateOrCreate(['code' => $course['code']], $course);
+            $model->lecturers()->syncWithoutDetaching([$lecturer->id]);
+            $model->students()->syncWithoutDetaching([$student->id]);
         }
     }
 }
