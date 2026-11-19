@@ -4,7 +4,7 @@ use App\Http\Controllers\Api\AttendanceApiController;
 use App\Http\Controllers\Api\AuthApiController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/login', [AuthApiController::class, 'login']);
+Route::post('/login', [AuthApiController::class, 'login'])->middleware('throttle:10,1');
 
 Route::middleware('bearer')->group(function () {
     Route::get('/me', [AuthApiController::class, 'me']);
