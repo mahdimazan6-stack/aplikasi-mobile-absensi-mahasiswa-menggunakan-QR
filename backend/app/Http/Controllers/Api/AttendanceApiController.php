@@ -45,30 +45,50 @@ class AttendanceApiController extends Controller
         ], 201);
     }
 
-    public function sessionAttendances(AttendanceSession $session): JsonResponse
+    public function sessionAttendances(Request $request, AttendanceSession $session): JsonResponse
     {
+        abort_unless(
+            $request->user()->role === 'dosen'
+            && $session->lecturer_id === $request->user()->id,
+            403
+        );
+
         $attendances = $session->attendances()->with('student')->get();
+
         return response()->json(['attendances' => $attendances]);
     }
 
-    public function courseAttendances(Course $course): JsonResponse
+    public function courseAttendances(Request $request, Course $course): JsonResponse
     {
+        abort_unless($request->user()->role === 'dosen', 403);
+
         $attendances = Attendance::with(['student', 'session.course'])
-            ->whereHas('session', fn ($query) => $query->where('course_id', $course->id))
+            ->whereHas('session', fn ($query) => $query
+                ->where('course_id', $course->id)
+                ->where('lecturer_id', $request->user()->id))
             ->latest('attended_at')
             ->get();
 
         return response()->json(['attendances' => $attendances]);
     }
 
-    public function endSession(AttendanceSession $session): JsonResponse
+    public function endSession(Request $request, AttendanceSession $session): JsonResponse
     {
+        abort_unless(
+            $request->user()->role === 'dosen'
+            && $session->lecturer_id === $request->user()->id,
+            403
+        );
+
         $session->update(['ended_at' => now(), 'expires_at' => now()]);
+
         return response()->json(['message' => 'Sesi absensi telah berakhir']);
     }
 
     public function history(Request $request): JsonResponse
     {
+        abort_unless($request->user()->role === 'mahasiswa', 403);
+
         $history = Attendance::with(['session.course'])
             ->where('student_id', $request->user()->id)
             ->latest('attended_at')
@@ -89,24 +109,24 @@ class AttendanceApiController extends Controller
         }
 
         $session = AttendanceSession::where('qr_token', $validated['qr_token'])->first();
-        if (!$session || $session->ended_at || $session->expires_at->isPast()) {
+        if (! $session || $session->ended_at || $session->expires_at->isPast()) {
             return response()->json(['message' => 'QR tidak valid atau sudah kedaluwarsa'], 422);
         }
 
-        $attendance = Attendance::where('attendance_session_id', $session->id)
-            ->where('student_id', $user->id)
-            ->first();
+        $attendance = Attendance::firstOrCreate(
+            [
+                'attendance_session_id' => $session->id,
+                'student_id' => $user->id,
+            ],
+            [
+                'status' => 'hadir',
+                'attended_at' => now(),
+            ],
+        );
 
-        if ($attendance) {
+        if (! $attendance->wasRecentlyCreated) {
             return response()->json(['message' => 'Mahasiswa sudah melakukan absensi'], 409);
         }
-
-        $attendance = Attendance::create([
-            'attendance_session_id' => $session->id,
-            'student_id' => $user->id,
-            'status' => 'hadir',
-            'attended_at' => now(),
-        ]);
 
         return response()->json([
             'message' => 'Absensi berhasil',
