@@ -17,11 +17,11 @@
                 <form method="POST" action="/login">
                     @csrf
 
-                    {{-- Email --}}
+                    {{-- Email atau NIM --}}
                     <div class="mb-4">
                         <h1 class="text-center font-bold m-5">Silahkan Masuk Ke Akun Anda</h1>
-                        <label class="text-sm font-medium text-slate-700 block mb-1">Email</label>
-                        <input type="email" name="email" placeholder="Masukkan Email Anda" value="{{ old('email') }}" required
+                        <label class="text-sm font-medium text-slate-700 block mb-1">Email atau NIM</label>
+                        <input type="text" name="email" placeholder="Masukkan Email atau NIM Anda" value="{{ old('email') }}" required
                             class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-slate-300 focus:border-slate-400 outline-none transition">
                         @error('email')
                             <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
