@@ -14,6 +14,10 @@ The project now contains both applications:
 
 ### Starting the Laravel backend
 
+Create a MySQL database named `absensi_mahasiswa` in MySQL/phpMyAdmin, then
+configure the connection values in `backend/.env` if your local MySQL host,
+username, or password differs from the defaults in `.env.example`.
+
 From the project root:
 
 ```sh
@@ -21,21 +25,17 @@ cd backend
 copy .env.example .env
 composer install
 php artisan key:generate
-type nul > database\database.sqlite
 php artisan migrate --seed
+php artisan admin:create
 php artisan serve --host=0.0.0.0 --port=8000
 ```
 
-The backend is configured to use SQLite by default.
+`php artisan admin:create` securely prompts for an administrator name, email,
+and password. The seeder adds local demo student/lecturer accounts and sample
+courses; do not use those demo credentials in production.
 
-The default API URL is `http://192.168.1.9:8000/api`. If using Laravel, start
-the API server so it accepts emulator connections:
-
-```sh
-php artisan serve --host=0.0.0.0 --port=8000
-```
-
-Then run the app without an `API_BASE_URL` override:
+The Android emulator uses `http://10.0.2.2:8000/api` by default. Start the app
+without an `API_BASE_URL` override:
 
 ```sh
 flutter run
@@ -53,14 +53,8 @@ are on the same network.
 
 ## Local demo accounts
 
-Create the backend tables and demo data from the Laravel backend directory with:
-
-```sh
-php artisan migrate
-php artisan db:seed --class="Database\Seeders\DatabaseSeeder"
-```
-
-For local development only:
+After running `php artisan db:seed`, these accounts are available for local
+development:
 
 | Role | NIM | Password |
 | --- | --- | --- |
